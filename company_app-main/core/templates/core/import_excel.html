@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% block title %}Importă agenți din Excel{% endblock %}
+{% block header %}Importă fișier Excel{% endblock %}
+
+{% block content %}
+<style>
+  .drop-zone {
+    border: 2px dashed #1db954;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    color: #666;
+    background-color: #fafafa;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .drop-zone.dragover {
+    background-color: #e0ffe0;
+  }
+</style>
+
+<div class="drop-zone" id="dropZone">
+  📁 Trage fișierul Excel aici sau fă clic pentru a selecta
+</div>
+
+<form id="uploadForm" method="post" enctype="multipart/form-data" style="display:none;">
+  {% csrf_token %}
+  <input type="file" name="file" id="fileInput" accept=".xlsx,.xls">
+</form>
+
+<script>
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  const uploadForm = document.getElementById("uploadForm");
+
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      fileInput.files = files;
+      uploadForm.submit();
+    }
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+      uploadForm.submit();
+    }
+  });
+</script>
+{% endblock %}
