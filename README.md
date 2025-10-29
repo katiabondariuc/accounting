@@ -1,29 +1,35 @@
-## Запуск проекта
+#  company_app — Django-проект для управления контрактами и фактурами
 
-1. Установите Docker и Docker Compose
-2. Выполните:
-   ```bash
-   docker-compose up --build
-   docker-compose exec web python manage.py migrate
+##  Запуск проекта
 
-   python -m venv venv
-   venv\Scripts\activate  # Windows
-   source venv/bin/activate  # macOS/Linux
+### 1. Установка Docker (рекомендуется)
 
-   pip install -r requirements.txt
-   python -m pip install --upgrade pip  # при необходимости
-   python manage.py migrate
-   python manage.py createsuperuser
+Убедитесь, что Docker и Docker Compose установлены.
 
-# Если нужно сбросить пароль
+```bash
+docker-compose up --build
+docker-compose exec web python manage.py migrate
 
-   python manage.py shell
-   from django.contrib.auth.models import User
-   user = User.objects.get(username='admin')
-   user.set_password('новый_пароль')
-   user.save()
-   exit()
+python -m venv venv
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # macOS/Linux
+pip install -r requirements.txt
+python -m pip install --upgrade pip  # при необходимости
+python manage.py migrate
+python manage.py createsuperuser
+
+# Сброс пароля суперпользователя (если нужно)
+
+python manage.py shell
+from django.contrib.auth.models import User
+user = User.objects.get(username='admin')
+user.set_password('новый_пароль')
+user.save()
+exit()
 
 python manage.py runserver
 
-   
+
+
+
+
