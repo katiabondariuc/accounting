@@ -26,6 +26,7 @@
       <td>{{ f.suma_facturii }}</td>
       <td>{{ f.contract.cod }} — {{ f.contract.denumirea }}</td>
       <td class="actions">
+        <a href="{% url 'factura_detail' f.pk %}" class="btn btn-view">Vezi</a>
         <a href="{% url 'factura_edit' f.pk %}" class="btn btn-edit">Redactează</a>
         <a href="{% url 'factura_delete' f.pk %}" class="btn btn-danger" onclick="return confirm('Ștergeți factura?')">Șterge</a>
       </td>
@@ -42,5 +43,4 @@
   <strong>Suma totală a facturilor:</strong>
   <span>{{ total_sum }}</span>
 </div>
-
 {% endblock %}

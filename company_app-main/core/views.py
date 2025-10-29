@@ -162,38 +162,12 @@ def factura_list(request):
 
 
 def factura_add(request):
-    if request.method == "POST":
-        form = FacturaForm(request.POST)
-        if form.is_valid():
-            factura = form.save(commit=False)
-            contract = factura.contract
+    form = FacturaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("factura_list")
+    return render(request, "core/factura_form.html", {"form": form, "warnings": getattr(form, "warnings", [])})
 
-            total_facturi = (
-                    Factura.objects.filter(contract=contract)
-                    .aggregate(Sum("suma_facturii"))["suma_facturii__sum"] or 0
-            )
-            suma_contractului = contract.suma_contractului or 0
-            noua_suma = factura.suma_facturii or 0
-
-            if total_facturi + noua_suma > suma_contractului:
-                context = {
-                    "form": form,
-                    "error_modal": (
-                        f"Suma totală a facturilor ({total_facturi + noua_suma:.2f} MDL) "
-                        f"depășește suma contractului ({suma_contractului:.2f} MDL)."
-                    ),
-                }
-                return render(request, "core/factura_form.html", context)
-
-            factura.save()
-            messages.success(request, "Factura a fost adăugată cu succes.")
-            return redirect("factura_list")
-        else:
-            return render(request, "core/factura_form.html", {"form": form})
-    else:
-        form = FacturaForm()
-
-    return render(request, "core/factura_form.html", {"form": form})
 
 
 def factura_edit(request, pk):
@@ -212,6 +186,10 @@ def factura_delete(request, pk):
     factura = get_object_or_404(Factura, pk=pk)
     factura.delete()
     return redirect("factura_list")
+
+def factura_detail(request, pk):
+    factura = get_object_or_404(Factura, pk=pk)
+    return render(request, "core/factura_detail.html", {"factura": factura})
 
 
 class PlataForm(forms.ModelForm):
@@ -405,6 +383,7 @@ def cont_bancar_delete(request, pk):
     agent_id = cont.agent.id
     cont.delete()
     return redirect("supplier_edit", pk=agent_id)
+
 
 @login_required
 def import_excel(request):

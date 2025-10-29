@@ -60,5 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 {% if error_modal %}
   <pre style="color:red;">{{ error_modal }}</pre>
+
+<div class="form-errors">
+    {{ form.non_field_errors }}
+  </div>
+{% endif %}
+
+{% if warnings %}
+  <div class="alert alert-warning">
+    {% for w in warnings %}
+      <p>{{ w }}</p>
+    {% endfor %}
+  </div>
 {% endif %}
 {% endblock %}

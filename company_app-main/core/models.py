@@ -9,7 +9,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-
 class AgentiComerciali(models.Model):
     cod = models.CharField(max_length=50, unique=True)
     denumirea = models.CharField(max_length=255)
@@ -71,6 +70,40 @@ class Contracte(models.Model):
     def __str__(self):
         return f"{self.nr_contractului} - {self.denumirea}"
 
+
+class BudgetLine(models.Model):
+    cod_bugetar = models.CharField(max_length=50, unique=True)
+    denumirea = models.CharField(max_length=255)
+    suma_alocata = models.DecimalField(max_digits=18, decimal_places=2)
+    anul = models.IntegerField(default=2025)
+
+    def suma_cheltuita(self):
+        return self.facturi.aggregate(total=Sum('suma_facturii'))['total'] or 0
+
+    def suma_ramasa(self):
+        return self.suma_alocata - self.suma_cheltuita()
+
+    def __str__(self):
+        return f"{self.cod_bugetar} - {self.denumirea}"
+
+    class Meta:
+        db_table = "linii_bugetare"
+
+    @property
+    def suma_cheltuita(self):
+        return self.items.aggregate(total=Sum('suma'))['total'] or 0
+
+    @property
+    def suma_ramasa(self):
+        return self.suma_alocata - self.suma_cheltuita
+
+    @property
+    def procent_cheltuit(self):
+        if self.suma_alocata > 0:
+            return round((self.suma_cheltuita / self.suma_alocata) * 100, 2)
+        return 0
+
+
 class Factura(models.Model):
     contract = models.ForeignKey(Contracte, on_delete=models.CASCADE, related_name="facturi")
     numar = models.CharField(max_length=100)
@@ -79,10 +112,26 @@ class Factura(models.Model):
     valuta = models.CharField(max_length=10, blank=True, null=True)
     comentariu = models.TextField(blank=True, null=True)
 
+    budget_line = models.ForeignKey(
+        BudgetLine,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="facturi"
+    )
+
     def clean(self):
-        total = Factura.objects.filter(contract=self.contract).exclude(pk=self.pk).aggregate(Sum('suma_facturii'))['suma_facturii__sum'] or 0
-        if total + self.suma_facturii > self.contract.suma_contractului:
-            raise ValidationError(f"Suma totală a facturilor ({total + self.suma_facturii} MDL) depășește suma contractului ({self.contract.suma_contractului} MDL).")
+        # Сохраняем общую сумму по контракту (без текущей фактуры)
+        self._contract_total = \
+        Factura.objects.filter(contract=self.contract).exclude(pk=self.pk).aggregate(Sum('suma_facturii'))[
+            'suma_facturii__sum'] or 0
+
+        # Сохраняем общую сумму по строке бюджета (если есть)
+        self._budget_total = None
+        if self.budget_line:
+            self._budget_total = \
+            Factura.objects.filter(budget_line=self.budget_line).exclude(pk=self.pk).aggregate(Sum('suma_facturii'))[
+                'suma_facturii__sum'] or 0
 
     def save(self, *args, **kwargs):
         self.full_clean()  # вызовет clean() перед сохранением
@@ -92,13 +141,43 @@ class Factura(models.Model):
 
     def __str__(self):
         return f"Factura {self.numar} ({self.contract.denumirea})"
-    
+
+
+
+
+
 class FacturaItem(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name="items")
     denumirea = models.CharField(max_length=255)
     cantitate = models.DecimalField(max_digits=12, decimal_places=2)
     pret_unitar = models.DecimalField(max_digits=12, decimal_places=2)
     suma = models.DecimalField(max_digits=18, decimal_places=2)
+
+    budget_line = models.ForeignKey(
+        BudgetLine,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="items"
+    )
+
+    def clean(self):
+        if self.budget_line:
+            total_existing = FacturaItem.objects.filter(
+                denumirea=self.denumirea,
+                budget_line=self.budget_line
+            ).exclude(pk=self.pk).aggregate(Sum('suma'))['suma__sum'] or 0
+
+            total_after = total_existing + self.suma
+            if total_after > self.budget_line.suma_alocata:
+                raise ValidationError(
+                    f"Totalul pentru produsul „{self.denumirea}” va fi {total_after} MDL, ceea ce depășește bugetul alocat ({self.budget_line.suma_alocata} MDL)."
+                )
+
+    def save(self, *args, **kwargs):
+        self.suma = self.cantitate * self.pret_unitar
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "factura_items"
@@ -156,4 +235,6 @@ class ContBancar(models.Model):
 
     class Meta:
         db_table = "cont_bancar"
+
+
 

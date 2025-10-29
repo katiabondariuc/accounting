@@ -1,0 +1,81 @@
+{% extends "core/base.html" %}
+{% block title %}Factura #{{ factura.numar }}{% endblock %}
+
+{% block content %}
+<h2>Factura #{{ factura.numar }}</h2>
+
+<table class="form-table">
+  <tr><td><strong>Data:</strong></td><td>{{ factura.data_facturii|date:"Y-m-d" }}</td></tr>
+  <tr><td><strong>Suma:</strong></td><td>{{ factura.suma_facturii }} MDL</td></tr>
+  <tr><td><strong>Contract:</strong></td><td>{{ factura.contract.cod }} — {{ factura.contract.denumirea }}</td></tr>
+</table>
+
+<h3>Produse / Servicii</h3>
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Denumire</th>
+      <th>Cantitate</th>
+      <th>Preț unitar</th>
+      <th>Suma</th>
+      <th>Buget</th>
+      <th>Acțiuni</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in factura.items.all %}
+    <tr>
+      <td>{{ item.denumirea }}</td>
+      <td>{{ item.cantitate }}</td>
+      <td>{{ item.pret_unitar }}</td>
+      <td>{{ item.suma }}</td>
+      <td>
+        {% if item.budget_line %}
+          {{ item.budget_line.cod_bugetar }}<br>
+          <button class="btn btn-info" onclick="toggleBudget('{{ item.id }}')">Afișează situația bugetară</button>
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td>
+        <a href="{% url 'factura_item_edit' item.pk %}" class="btn btn-edit">Edit</a>
+        <a href="{% url 'factura_item_delete' item.pk %}" class="btn btn-danger">Șterge</a>
+      </td>
+    </tr>
+    {% if item.budget_line %}
+    <tr id="budget-{{ item.id }}" style="display:none;">
+      <td colspan="6" style="background:#f9f9f9; font-size:14px;">
+        <strong>{{ item.budget_line.denumirea }}</strong><br>
+        Alocat: {{ item.budget_line.suma_alocata }} MDL<br>
+        Cheltuit: {{ item.budget_line.suma_cheltuita }} MDL<br>
+        Rămas: {{ item.budget_line.suma_ramasa }} MDL<br>
+        <div style="width:100%; background:#eee; border-radius:5px; margin-top:5px;">
+          <div style="width:{{ item.budget_line.procent_cheltuit }}%; background:
+            {% if item.budget_line.procent_cheltuit > 100 %}
+              #e03131
+            {% elif item.budget_line.procent_cheltuit > 90 %}
+              #f0ad4e
+            {% else %}
+              #4caf50
+            {% endif %}
+          ; height:10px; border-radius:5px;"></div>
+        </div>
+        <small>{{ item.budget_line.procent_cheltuit }}% din buget utilizat</small>
+      </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+
+<a href="{% url 'factura_list' %}" class="btn btn-secondary">Înapoi la listă</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleBudget(id) {
+  const el = document.getElementById("budget-" + id);
+  el.style.display = (el.style.display === "none") ? "table-row" : "none";
+}
+</script>
+{% endblock %}

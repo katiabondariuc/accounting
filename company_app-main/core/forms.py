@@ -44,12 +44,38 @@ class ContracteForm(forms.ModelForm):
         }
 
 class FacturaForm(forms.ModelForm):
+    warnings = []
+
     class Meta:
         model = Factura
         fields = "__all__"
         widgets = {
             "data_facturii": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        contract = cleaned_data.get("contract")
+        suma = cleaned_data.get("suma_facturii")
+        budget_line = cleaned_data.get("budget_line")
+
+        self.warnings = []
+
+        if contract and suma:
+            total = Factura.objects.filter(contract=contract).exclude(pk=self.instance.pk).aggregate(Sum('suma_facturii'))['suma_facturii__sum'] or 0
+            remaining = contract.suma_contractului - total
+            if suma > remaining:
+                self.warnings.append(f"Atenție: suma facturii ({suma} MDL) depășește limita contractului. Rămâne doar {remaining} MDL.")
+
+        if budget_line and suma:
+            total_buget = Factura.objects.filter(budget_line=budget_line).exclude(pk=self.instance.pk).aggregate(Sum('suma_facturii'))['suma_facturii__sum'] or 0
+            remaining_buget = budget_line.suma_alocata - total_buget
+            if suma > remaining_buget:
+                self.warnings.append(f"Atenție: suma facturii depășește bugetul pentru {budget_line.denumirea}. Rămâne doar {remaining_buget} MDL.")
+
+        return cleaned_data
+
+
 
 
 class FacturaItemForm(forms.ModelForm):

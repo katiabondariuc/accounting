@@ -22,6 +22,8 @@ urlpatterns = [
     path('facturi/add/', views.factura_add, name='factura_add'),
     path('facturi/<int:pk>/edit/', views.factura_edit, name='factura_edit'),
     path('facturi/<int:pk>/delete/', views.factura_delete, name='factura_delete'),
+    path("factura/<int:pk>/", views.factura_detail, name="factura_detail"),
+
     
     path('plati/', views.plata_list, name='plata_list'),
     path('plati/add/', views.plata_add, name='plata_add'),
